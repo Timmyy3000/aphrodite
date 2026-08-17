@@ -1,0 +1,44 @@
+{
+  "name": "aphrodite",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "aphrodite": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./contracts": "./dist/contracts/v1.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "fixtures:verify": "tsx tests/fixtures/build-fixtures.ts --verify",
+    "test:e2e": "vitest run tests/e2e",
+    "test:performance": "tsx tests/fixtures/build-fixtures.ts --verify-performance",
+    "test:performance:external": "tsx tests/fixtures/build-fixtures.ts --verify-external",
+    "skill:smoke": "tsx tests/skill-smoke.ts",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.0.0",
+    "fzstd": "^0.1.1",
+    "kiwi-schema": "0.5.0",
+    "pako": "^2.1.0",
+    "yauzl": "^3.2.0",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/pako": "^2.0.3",
+    "@types/yauzl": "^2.10.3",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}
