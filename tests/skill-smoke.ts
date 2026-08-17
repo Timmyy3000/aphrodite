@@ -13,6 +13,9 @@ const copied = join(skillsRoot, 'aphrodite');
 await cp(join(process.cwd(), 'skills', 'aphrodite'), copied, { recursive: true });
 const skill = await readFile(join(copied, 'SKILL.md'), 'utf8');
 if (!skill.startsWith('---\nname: aphrodite\ndescription: ')) throw new Error('Skill frontmatter is missing the required name/description.');
+if (!skill.includes('MCP-first') || !skill.includes('npx --yes github:Timmyy3000/aphrodite')) throw new Error('Skill is missing the MCP-first GitHub setup workflow.');
+const interfaceMetadata = await readFile(join(copied, 'agents', 'openai.yaml'), 'utf8');
+if (!interfaceMetadata.includes('display_name:') || !interfaceMetadata.includes('default_prompt:')) throw new Error('Skill UI metadata is missing required interface fields.');
 if (!(await stat(join(copied, 'SKILL.md'))).isFile()) throw new Error('Copied skill is not discoverable.');
 if (!(await readdir(skillsRoot)).includes('aphrodite')) throw new Error('Copied skill directory was not discovered.');
 

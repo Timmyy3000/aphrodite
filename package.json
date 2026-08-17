@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "files": [
+    "dist",
+    "skills",
+    "README.md"
+  ],
   "engines": {
     "node": ">=22"
   },
@@ -14,6 +19,8 @@
     "./contracts": "./dist/contracts/v1.js"
   },
   "scripts": {
+    "prepare": "npm run build",
+    "prepack": "npm run build",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",

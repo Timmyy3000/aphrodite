@@ -1,59 +1,97 @@
 ---
 name: aphrodite
-description: Resolve imported local Figma links into bounded implementation context, preserve recorded measurements as facts, and implement verified flex/grid layouts with tracked application assets.
+description: Use Aphrodite's local MCP server to turn a local Figma .fig file and a copied frame link into bounded, structured design context for pixel-accurate UI implementation. Trigger when an agent needs to implement, inspect, or troubleshoot a Figma frame offline, especially when the result should use semantic flexbox/grid instead of brittle absolute positioning.
 ---
 
 # Aphrodite
 
-Use this skill when a task includes a copied Figma design link or a local `.fig` snapshot and the implementation agent needs offline design context.
+Aphrodite is an MCP-first design implementation tool. It gives an agent local, structured evidence from a `.fig` file—hierarchy, measurements, typography, visual styles, components, layout facts, and asset references—plus confidence-labelled flex/grid guidance. Use that context to get the rendered result close to the design without treating Figma coordinates as a mandate for absolute positioning.
 
-## Prerequisites
+## Operating rule
 
-- Aphrodite is built with Node.js 22+ (`npm run build`).
-- The consuming project is initialized with `aphrodite init`.
-- A local zipped `.fig` archive is available. Network access and Figma API tokens are not required. Raw `canvas.fig` and parser-shaped JSON are diagnostic/test inputs, not the primary handoff format.
-- The first supported host is Codex. Install this self-contained directory by copying `skills/aphrodite/` into the user's Codex skills directory. Do not mutate a user profile from a project script.
+Use the Aphrodite MCP tools as the design-context interface. Use the CLI only to initialize a consuming project, import the local `.fig`, and diagnose setup or import errors. Do not parse `.aphrodite` internals or parser JSON yourself when MCP is available.
 
-## Import and query
+## Get the user running
 
-```bash
-node dist/cli.js init --project .
-node dist/cli.js import ./design.fig --project . --file-key FILEKEY --alias handoff --json
-node dist/cli.js inspect --project . --alias handoff --json
-node dist/cli.js inspect --project . --url "https://www.figma.com/design/FILEKEY/Handoff?node-id=1-2" --json
-```
+Walk the user through this sequence when Aphrodite is not connected:
 
-The import step converts the `.fig` archive into the local `.aphrodite/.../document.json` representation and extracts cache-local assets. The file-only command lists visible top-level frames and sections. The node command returns bounded context. Use `--depth`, `--max-nodes`, and `--max-text-units` when a screen is large. Nested instance-path IDs return `INSTANCE_PATH_UNSUPPORTED`; do not guess an override mapping.
+1. Confirm that Node.js 22+ is installed and identify the application project root.
+2. Ask for the path to the local zipped `.fig` file. Do not ask for a Figma API token; Aphrodite is local-only.
+3. Ask whether the user will paste a Figma frame link. If so, import with the link's file key; otherwise use a stable alias.
+4. Run the GitHub-backed npx commands from the application project root. This does not require an npm publication or a repository checkout in the application:
 
-The equivalent MCP stdio configuration is:
+   ```bash
+   npx --yes github:Timmyy3000/aphrodite init --project .
+   npx --yes github:Timmyy3000/aphrodite import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
+   ```
 
-```json
-{
-  "mcpServers": {
-    "aphrodite": {
-      "command": "node",
-      "args": ["/absolute/path/to/aphrodite/dist/cli.js", "mcp", "--project", "/absolute/path/to/project"]
-    }
-  }
-}
-```
+   Use a quoted path on Windows PowerShell:
 
-Only `list_design_screens` and `get_design_context` are exposed. Keep the MCP process stdout untouched; diagnostics belong on stderr.
+   ```powershell
+   npx --yes github:Timmyy3000/aphrodite init --project .
+   npx --yes github:Timmyy3000/aphrodite import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
+   ```
 
-## Implementation loop
+   The first npx run downloads the public GitHub package into npm's cache and builds the CLI through its `prepare` script. If the user wants a fixed/offline checkout, clone the repository, run `npm ci` and `npm run build`, and replace the npx command with `node /absolute/path/to/aphrodite/dist/cli.js`.
 
-1. Inspect the existing project conventions, component system, typography, spacing tokens, and tracked asset directories before writing code.
-2. Treat `facts` as recorded design evidence: geometry, layout properties, spacing, typography, visual styles, component references, and asset mappings. Treat `guidance` as confidence-labelled heuristics, not requirements.
-3. Prefer semantic flexbox/grid and the project's existing primitives. Use absolute positioning only when the facts and the surrounding design justify it.
-4. For an asset marked `resolved`, copy the selected cache file into an existing tracked application asset directory. Aphrodite never chooses or mutates that destination. Run `git check-ignore <destination>` and ensure it is not ignored before referencing the copy. Never import application code from `.aphrodite/`.
-5. Validate geometry with the recorded bounds, responsive behavior, and the consuming project's tests or screenshot workflow. Screenshot capture/diffing remains the consuming agent's responsibility.
+5. Add the MCP server to the user's agent host and reload it:
+
+   ```json
+   {
+     "mcpServers": {
+       "aphrodite": {
+         "command": "npx",
+         "args": [
+           "--yes",
+           "github:Timmyy3000/aphrodite",
+           "mcp",
+           "--project",
+           "/absolute/path/to/the/application"
+         ]
+       }
+     }
+   }
+   ```
+
+   For a persistent checkout, set `command` to `node` and the first argument to that checkout's `dist/cli.js`.
+
+Explain that installing this skill and connecting the MCP server are separate steps: the skill is the agent's playbook, while MCP provides live design data.
+
+## MCP-first implementation loop
+
+When the user gives a copied frame link or asks to implement a screen:
+
+1. Confirm the application root, imported alias/file key, and requested frame link or node ID. Ask only for missing prerequisites.
+2. Call `list_design_screens` with `{ "fileKey": "FILEKEY" }` or `{ "alias": "handoff" }` to verify the import and discover visible screens.
+3. Call `get_design_context` for the requested frame. Prefer the copied URL when the import was registered with its file key:
+
+   ```json
+   { "url": "https://www.figma.com/design/FILEKEY/Handoff?node-id=1-2" }
+   ```
+
+   Otherwise use `{ "alias": "handoff", "nodeId": "1:2" }`. Request smaller `depth`, `maxNodes`, or `maxTextUnits` budgets when a frame is large.
+4. Read `facts` as recorded design evidence: bounds, layout mode, padding, gaps, sizing, typography, fills, strokes, radii, component references, and asset mappings.
+5. Read `guidance` as heuristics. Preserve its confidence and evidence; do not present a suggestion as a Figma fact.
+6. Inspect the consuming project's existing components, tokens, typography, responsive conventions, and tracked asset directories before writing code.
+7. Build semantic flexbox/grid structure that reproduces the recorded relationships. Use absolute positioning only when the evidence and surrounding design genuinely require it; do not translate every `x`/`y` coordinate into CSS.
+8. For an asset marked `resolved`, copy the cache file into an existing tracked application asset directory. Verify the destination with `git check-ignore <destination>` and make sure it is not ignored. Never make application code depend on `.aphrodite/`.
+9. Validate the implementation with the consuming project's tests, responsive checks, and screenshot/diff workflow. Report remaining visual uncertainty instead of claiming exactness without evidence.
+
+## Tool contract
+
+Aphrodite exposes exactly two MCP tools:
+
+- `list_design_screens`: list visible top-level frame/section screens for a file key, alias, or URL.
+- `get_design_context`: return bounded context for a node, including facts, children, assets, guidance, warnings, and truncation information.
+
+MCP stdout is reserved for JSON-RPC; diagnostics belong on stderr. Responses are bounded. Treat `truncation` as part of the result: if content was omitted, request a narrower subtree or a larger permitted budget rather than inventing missing details.
 
 ## Recovery
 
-- `PROJECT_NOT_INITIALIZED`: run `init` from the intended project root.
-- `DOCUMENT_NOT_IMPORTED`: import the snapshot with the same alias or file key used by the copied link.
-- `NODE_NOT_FOUND`: verify the simple `session-local` node ID and that the selected snapshot contains it.
-- `INSTANCE_PATH_UNSUPPORTED`: use the containing frame or a canonical simple node ID; do not infer a nested instance path.
-- `UNSUPPORTED_FORMAT_VERSION`: this MVP accepts only canvas version 106. Keep the source and request an explicit format upgrade rather than bypassing the guard.
-- `ASSET_NOT_FOUND`/unsupported asset records: use an existing tracked project asset or export the asset manually; do not make generated code depend on an ignored cache path.
-- Cache/schema/lock errors: stop the MCP process, verify the project root, and remove only that root's disposable `.aphrodite/` directory before re-running `init` and `import`.
+- `PROJECT_NOT_INITIALIZED`: run `init` from the intended application root.
+- `DOCUMENT_NOT_IMPORTED`: import the `.fig` with the same alias or file key used by the query.
+- `NODE_NOT_FOUND`: verify the simple `pageId:nodeId` from the copied link and the selected import.
+- `INSTANCE_PATH_UNSUPPORTED`: use the containing frame or a canonical simple node ID; do not infer an override mapping.
+- `UNSUPPORTED_FORMAT_VERSION`: this MVP accepts canvas version 106. Keep the source and request an explicit parser upgrade rather than bypassing the guard.
+- `ASSET_NOT_FOUND` or an unsupported asset record: use a tracked project asset or export the asset manually; do not generate code that depends on a missing cache file.
+- Cache, schema, or lock errors: stop the MCP process, verify the application root, and remove only that root's disposable `.aphrodite/` directory before re-running `init` and `import`.

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Aphrodite design implementation"
+  short_description: "Use local Figma MCP for pixel-accurate UI"
+  default_prompt: "Use $aphrodite to implement this copied Figma frame through the local MCP."
+
+policy:
+  allow_implicit_invocation: true
