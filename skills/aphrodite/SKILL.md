@@ -21,15 +21,15 @@ Walk the user through this sequence when Aphrodite is not connected:
 4. Run the GitHub-backed npx commands from the application project root. This does not require an npm publication or a repository checkout in the application:
 
    ```bash
-   npx --yes github:Timmyy3000/aphrodite init --project .
-   npx --yes github:Timmyy3000/aphrodite import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
+   npx --yes github:Timmyy3000/aphrodite#v0.2.0 init --project .
+   npx --yes github:Timmyy3000/aphrodite#v0.2.0 import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
    ```
 
    Use a quoted path on Windows PowerShell:
 
    ```powershell
-   npx --yes github:Timmyy3000/aphrodite init --project .
-   npx --yes github:Timmyy3000/aphrodite import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
+   npx --yes github:Timmyy3000/aphrodite#v0.2.0 init --project .
+   npx --yes github:Timmyy3000/aphrodite#v0.2.0 import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
    ```
 
    The first npx run downloads the public GitHub package into npm's cache and builds the CLI through its `prepare` script. If the user wants a fixed/offline checkout, clone the repository, run `npm ci` and `npm run build`, and replace the npx command with `node /absolute/path/to/aphrodite/dist/cli.js`.
@@ -43,7 +43,7 @@ Walk the user through this sequence when Aphrodite is not connected:
          "command": "npx",
          "args": [
            "--yes",
-           "github:Timmyy3000/aphrodite",
+           "github:Timmyy3000/aphrodite#v0.2.0",
            "mcp",
            "--project",
            "/absolute/path/to/the/application"
@@ -75,7 +75,7 @@ When the user gives a copied frame link or asks to implement a screen:
 6. Inspect the consuming project's existing components, tokens, typography, responsive conventions, and tracked asset directories before writing code.
 7. Build semantic flexbox/grid structure that reproduces the recorded relationships. Use absolute positioning only when the evidence and surrounding design genuinely require it; do not translate every `x`/`y` coordinate into CSS.
 8. For an asset marked `resolved`, copy the cache file into an existing tracked application asset directory. Verify the destination with `git check-ignore <destination>` and make sure it is not ignored. Never make application code depend on `.aphrodite/`.
-9. Validate the implementation with the consuming project's tests, responsive checks, and screenshot/diff workflow. Report remaining visual uncertainty instead of claiming exactness without evidence.
+9. Validate the implementation with the consuming project's tests, responsive checks, and rendered output. Do not use browser screenshots as a substitute for design evidence missing from Aphrodite; report the extraction gap so the local handoff can be improved.
 
 ## Tool contract
 
@@ -85,6 +85,8 @@ Aphrodite exposes exactly two MCP tools:
 - `get_design_context`: return bounded context for a node, including facts, children, assets, guidance, warnings, and truncation information.
 
 MCP stdout is reserved for JSON-RPC; diagnostics belong on stderr. Responses are bounded. Treat `truncation` as part of the result: if content was omitted, request a narrower subtree or a larger permitted budget rather than inventing missing details.
+
+Version `0.2.0` returns parser-native sizes and positions, compact paints, stack layout fields, and font/rich-text styles. Its default query includes two descendant levels to preserve semantic structure without flooding context with deep vector internals.
 
 ## Recovery
 

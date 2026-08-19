@@ -68,22 +68,85 @@ function pick(raw: Record<string, any>, keys: string[]): Record<string, unknown>
   return result;
 }
 
+function compactPaints(value: unknown): unknown {
+  if (!Array.isArray(value)) return clonePublic(value);
+  return value.slice(0, 32).map(paint => {
+    if (!paint || typeof paint !== 'object') return clonePublic(paint);
+    const item = paint as Record<string, any>;
+    if (item.type !== 'SOLID' || !item.color) return clonePublic(item);
+    if (![item.color.r, item.color.g, item.color.b, item.color.a ?? 1, item.opacity ?? 1].map(Number).every(Number.isFinite)) return clonePublic(item);
+    const channel = (number: unknown) => Math.max(0, Math.min(255, Math.round(Number(number) * 255))).toString(16).padStart(2, '0').toUpperCase();
+    const alpha = Number(item.color.a ?? 1) * Number(item.opacity ?? 1);
+    return { type: 'SOLID', color: `#${channel(item.color.r)}${channel(item.color.g)}${channel(item.color.b)}`, ...(alpha < 1 ? { opacity: Math.round(alpha * 1000) / 1000 } : {}) };
+  });
+}
+
 function canonicalMaybe(value: unknown): string | undefined {
   try { return canonicalNodeId(value); } catch { return undefined; }
 }
 
 function baseTextStyle(raw: Record<string, any>, textRaw: Record<string, any>): Record<string, unknown> {
   const merged = { ...pick(raw, TEXT_STYLE_FIELDS), ...pick(textRaw, TEXT_STYLE_FIELDS), ...pick(textRaw.style ?? {}, TEXT_STYLE_FIELDS) };
+  const source = { ...raw, ...textRaw, ...(textRaw.style ?? {}) };
+  const font = source.fontName;
+  if (font && typeof font === 'object') {
+    if (font.family !== undefined) merged.fontFamily = clonePublic(font.family);
+    if (font.style !== undefined) merged.fontStyle = clonePublic(font.style);
+    if (font.postscript !== undefined) merged.fontPostScriptName = clonePublic(font.postscript);
+  }
+  if (source.lineHeight !== undefined && merged.lineHeightPx === undefined) merged.lineHeight = clonePublic(source.lineHeight);
+  if (source.fillPaints !== undefined && merged.fills === undefined) merged.fills = compactPaints(source.fillPaints);
+  if (source.strokePaints !== undefined && merged.strokes === undefined) merged.strokes = compactPaints(source.strokePaints);
   return merged;
 }
 
 function styleOverride(table: unknown, styleId: unknown): Record<string, unknown> | undefined {
   if (styleId === undefined || styleId === null) return undefined;
   let value: unknown;
-  if (Array.isArray(table)) value = table[Number(styleId)];
+  if (Array.isArray(table)) value = table.find(item => item && typeof item === 'object' && String((item as Record<string, unknown>).styleID) === String(styleId)) ?? table[Number(styleId)];
   else if (table && typeof table === 'object') value = (table as Record<string, unknown>)[String(styleId)];
   if (!value || typeof value !== 'object') return undefined;
-  return pick(value as Record<string, any>, TEXT_STYLE_FIELDS);
+  return baseTextStyle(value as Record<string, any>, value as Record<string, any>);
+}
+
+function parserGeometry(raw: Record<string, any>): Record<string, unknown> {
+  const geometry = pick(raw, GEOMETRY_FIELDS);
+  if (raw.size && typeof raw.size === 'object' && raw.size.width === undefined) {
+    const width = Number(raw.size.x); const height = Number(raw.size.y);
+    if (Number.isFinite(width) && Number.isFinite(height)) geometry.size = { width, height };
+  }
+  const transform = raw.transform;
+  if (transform && typeof transform === 'object') {
+    const x = Number(transform.m02); const y = Number(transform.m12);
+    if (Number.isFinite(x) && Number.isFinite(y)) geometry.position = { x, y };
+    const matrix = [transform.m00, transform.m01, transform.m02, transform.m10, transform.m11, transform.m12].map(Number);
+    if (matrix.every(Number.isFinite) && (matrix[0] !== 1 || matrix[1] !== 0 || matrix[3] !== 0 || matrix[4] !== 1)) geometry.transform = matrix;
+  }
+  return geometry;
+}
+
+function parserLayout(raw: Record<string, any>): Record<string, unknown> {
+  const layout = pick(raw, LAYOUT_FIELDS);
+  const aliases: Record<string, string> = {
+    stackMode: 'layoutMode', stackSpacing: 'itemSpacing', stackPrimarySizing: 'primaryAxisSizingMode',
+    stackCounterSizing: 'counterAxisSizingMode', stackPrimaryAlignItems: 'primaryAxisAlignItems',
+    stackCounterAlignItems: 'counterAxisAlignItems', stackPaddingLeft: 'paddingLeft',
+    stackPaddingRight: 'paddingRight', stackPaddingTop: 'paddingTop', stackPaddingBottom: 'paddingBottom',
+  };
+  for (const [source, target] of Object.entries(aliases)) if (raw[source] !== undefined && layout[target] === undefined) layout[target] = clonePublic(raw[source]);
+  if ((raw.horizontalConstraint !== undefined || raw.verticalConstraint !== undefined) && layout.constraints === undefined) {
+    layout.constraints = { ...(raw.horizontalConstraint === undefined ? {} : { horizontal: clonePublic(raw.horizontalConstraint) }), ...(raw.verticalConstraint === undefined ? {} : { vertical: clonePublic(raw.verticalConstraint) }) };
+  }
+  return layout;
+}
+
+function parserVisual(raw: Record<string, any>): Record<string, unknown> {
+  const visual = pick(raw, VISUAL_FIELDS);
+  if (raw.fillPaints !== undefined && visual.fills === undefined) visual.fills = compactPaints(raw.fillPaints);
+  if (raw.strokePaints !== undefined && visual.strokes === undefined) visual.strokes = compactPaints(raw.strokePaints);
+  if (visual.opacity === 1) delete visual.opacity;
+  if (visual.blendMode === 'NORMAL') delete visual.blendMode;
+  return visual;
 }
 
 function equalStyle(a: unknown, b: unknown): boolean {
@@ -176,9 +239,9 @@ function componentFacts(raw: Record<string, any>, nodeId: string, index: DesignI
 
 export function extractNodeFacts(node: GraphNode, index: DesignIndex, options: FactOptions): Record<string, unknown> {
   const raw = node.raw;
-  const geometry = pick(raw, GEOMETRY_FIELDS);
-  const layout = pick(raw, LAYOUT_FIELDS);
-  const visual = pick(raw, VISUAL_FIELDS);
+  const geometry = parserGeometry(raw);
+  const layout = parserLayout(raw);
+  const visual = parserVisual(raw);
   const facts: Record<string, unknown> = {};
   if (Object.keys(geometry).length) facts.geometry = geometry;
   if (Object.keys(layout).length) facts.layout = layout;
@@ -199,8 +262,9 @@ function documentSummary(imported: ImportedDocument, includeSchemas = false) {
   return { importId: imported.importId, ...(manifest.fileKey ? { fileKey: manifest.fileKey } : {}), ...(manifest.alias ? { alias: manifest.alias } : {}), formatVersion: manifest.formatVersion, ...(includeSchemas ? { cacheSchemaVersion: manifest.cacheSchemaVersion, contextSchemaVersion: manifest.contextSchemaVersion } : {}) };
 }
 
-function cacheAssetsForNode(imported: ImportedDocument, nodeId: string): CacheAssetRecordV1[] {
-  return imported.assets.records.filter(asset => asset.canonicalNodeId === nodeId);
+function cacheAssetsForNode(imported: ImportedDocument, nodeId: string): { assets: CacheAssetRecordV1[]; unsupported: number } {
+  const records = imported.assets.records.filter(asset => asset.canonicalNodeId === nodeId);
+  return { assets: records.filter(asset => asset.status !== 'unsupported'), unsupported: records.filter(asset => asset.status === 'unsupported').length };
 }
 
 function countSubtree(node: GraphNode): number {
@@ -233,7 +297,7 @@ function limitContextAssets(root: ContextNodeV1, maximum: number): number {
   return omitted;
 }
 
-function childContexts(target: GraphNode, index: DesignIndex, imported: ImportedDocument, maxDepth: number, maxNodes: number, options: FactOptions): { node: ContextNodeV1; returned: number } {
+function childContexts(target: GraphNode, index: DesignIndex, imported: ImportedDocument, maxDepth: number, maxNodes: number, options: FactOptions): { node: ContextNodeV1; returned: number; unsupportedAssets: number } {
   // Select nodes breadth-first first, then rebuild the original tree. This keeps
   // maxNodes deterministic and gives target facts/text priority over descendants.
   const selected = new Set<GraphNode>([target]);
@@ -244,8 +308,9 @@ function childContexts(target: GraphNode, index: DesignIndex, imported: Imported
     selected.add(item.node);
     if (item.depth < maxDepth) for (const child of item.node.children) queue.push({ node: child, depth: item.depth + 1 });
   }
-  const build = (node: GraphNode): ContextNodeV1 => ({ id: node.id, name: String(node.raw.name ?? ''), type: String(node.raw.type ?? node.raw.nodeType ?? 'UNKNOWN'), facts: extractNodeFacts(node, index, options), assets: cacheAssetsForNode(imported, node.id), children: node.children.filter(child => selected.has(child)).map(build) });
-  return { node: build(target), returned: selected.size };
+  let unsupportedAssets = 0;
+  const build = (node: GraphNode): ContextNodeV1 => { const cached = cacheAssetsForNode(imported, node.id); unsupportedAssets += cached.unsupported; return { id: node.id, name: String(node.raw.name ?? ''), type: String(node.raw.type ?? node.raw.nodeType ?? 'UNKNOWN'), facts: extractNodeFacts(node, index, options), assets: cached.assets, children: node.children.filter(child => selected.has(child)).map(build) }; };
+  return { node: build(target), returned: selected.size, unsupportedAssets };
 }
 
 async function readRawDocument(imported: ImportedDocument): Promise<RawDocumentEnvelopeV1> {
@@ -314,7 +379,7 @@ export class DesignStore {
     const depth = requested.depth ?? LIMITS.defaultContextDepth;
     const maxNodes = requested.maxNodes ?? LIMITS.defaultContextNodes;
     const maxTextUnits = requested.maxTextUnits ?? LIMITS.defaultTextUnitsPerResponse;
-    if (maxNodes < 1 || depth > LIMITS.maxContextDepth || maxNodes > LIMITS.maxContextNodes || maxTextUnits > LIMITS.maxTextUnitsPerResponse) throw new AphroditeError('RESOURCE_LIMIT_EXCEEDED', 'Context budget is outside the supported range.', { depth, maxNodes, maxTextUnits, minimumNodes: 1 });
+    if (maxNodes < 1 || depth > LIMITS.maxContextDepth || maxNodes > LIMITS.maxContextNodes || maxTextUnits > LIMITS.maxTextUnitsPerResponse) throw new AphroditeError('RESOURCE_LIMIT_EXCEEDED', 'Context budget is outside the supported range.', { requested: { depth, maxNodes, maxTextUnits }, supported: { depth: { minimum: 0, maximum: LIMITS.maxContextDepth }, maxNodes: { minimum: 1, maximum: LIMITS.maxContextNodes }, maxTextUnits: { minimum: 0, maximum: LIMITS.maxTextUnitsPerResponse } } });
     const loaded = await this.resolveFile(parsed.alias ? { alias: parsed.alias } : { fileKey: parsed.fileKey! });
     const target = loaded.graph.nodes.get(parsed.nodeId);
     if (!target) throw new AphroditeError('NODE_NOT_FOUND', `Node ${parsed.nodeId} was not found in the imported document.`, { nodeId: parsed.nodeId });
@@ -326,7 +391,8 @@ export class DesignStore {
     while (parent && ancestry.length < LIMITS.maxAncestry) { ancestry.push(parent); parent = loaded.graph.nodes.get(parent)?.parentId ?? null; }
     ancestry.reverse();
     const built = childContexts(target, loaded.index, loaded.imported, depth, Math.max(0, maxNodes - 1), options);
-    const omittedAssets = limitContextAssets(built.node, LIMITS.maxAssets);
+    const omittedAssets = built.unsupportedAssets + limitContextAssets(built.node, LIMITS.maxAssets);
+    if (built.unsupportedAssets) warnings.push(warning('UNSUPPORTED_ASSETS_OMITTED', 'Unsupported low-level asset diagnostics were summarized to keep context compact.', undefined, built.unsupportedAssets));
     const totalNodes = countSubtree(target);
     const returnedNodes = Math.min(totalNodes, built.returned);
     const omittedNodes = Math.max(0, totalNodes - returnedNodes);

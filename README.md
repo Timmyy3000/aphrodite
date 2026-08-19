@@ -1,6 +1,8 @@
 # Aphrodite
 
-Aphrodite is an MCP-first, local-first Figma `.fig` tool for agents building pixel-perfect interfaces. It turns a local design file and a copied frame link into bounded, structured design context: recorded measurements and styles, hierarchy, component information, asset references, and confidence-labelled flex/grid guidance. The goal is a close computed result without forcing agents into brittle absolute positioning. Figma API access and an npm publication are not required.
+Aphrodite is an MCP-first, local-first Figma `.fig` tool for agents building pixel-perfect interfaces. It turns a local design file and a copied frame link into bounded, structured design context: recorded measurements and styles, hierarchy, component information, asset references, and confidence-labelled flex/grid guidance. The goal is a close computed result without forcing agents into brittle absolute positioning. Figma API access, browser screenshots, and an npm publication are not required.
+
+Version `0.2.0` normalizes the parser-native geometry, transform, paint, stack-layout, and typography fields found in canvas 106 documents. It also fixes rich-text style lookup and reduces default response density by summarizing unsupported vector diagnostics and returning two descendant levels by default.
 
 ## Start with MCP (no repository checkout required)
 
@@ -9,15 +11,15 @@ Users only need Node.js 22+ (which includes `npm`/`npx`), a local zipped `.fig` 
 From the application project root, run:
 
 ```bash
-npx --yes github:Timmyy3000/aphrodite init --project .
-npx --yes github:Timmyy3000/aphrodite import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
+npx --yes github:Timmyy3000/aphrodite#v0.2.0 init --project .
+npx --yes github:Timmyy3000/aphrodite#v0.2.0 import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
 ```
 
 On Windows PowerShell, quote paths that contain spaces:
 
 ```powershell
-npx --yes github:Timmyy3000/aphrodite init --project .
-npx --yes github:Timmyy3000/aphrodite import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
+npx --yes github:Timmyy3000/aphrodite#v0.2.0 init --project .
+npx --yes github:Timmyy3000/aphrodite#v0.2.0 import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
 ```
 
 Use `--file-key` when the agent will receive a copied Figma URL; use only `--alias handoff` when the agent will refer to the imported file by alias.
@@ -31,7 +33,7 @@ Then add Aphrodite to the agent host's MCP configuration. The portable GitHub/np
       "command": "npx",
       "args": [
         "--yes",
-        "github:Timmyy3000/aphrodite",
+        "github:Timmyy3000/aphrodite#v0.2.0",
         "mcp",
         "--project",
         "/absolute/path/to/the/application"
@@ -85,13 +87,13 @@ When a user asks to implement a design, the agent should:
 3. Call `list_design_screens` to confirm the imported file, then `get_design_context` for the requested frame.
 4. Treat `facts` as recorded design evidence and `guidance` as confidence-labelled implementation suggestions.
 5. Inspect the consuming project's components, tokens, typography, and asset conventions before writing code.
-6. Implement semantic flexbox/grid structure, copy only selected resolved assets into tracked application directories, and validate the result with the project's screenshot or test workflow.
+6. Implement semantic flexbox/grid structure, copy only selected resolved assets into tracked application directories, and validate with the consuming project's tests and rendered output. Do not use browser screenshots as a substitute for design evidence missing from Aphrodite; report the extraction gap instead.
 
 The CLI remains available for initialization, import, and diagnostics; MCP is the primary design-context interface for agents.
 
 ## URLs and context
 
-Simple copied links such as `https://www.figma.com/design/FILEKEY/name?node-id=1-2` resolve offline after importing with the matching `--file-key`. File-only queries list visible top-level frame/section screens. Node queries return bounded geometry, layout, visual, text, component, and asset facts. Nested instance-path IDs are intentionally rejected with `INSTANCE_PATH_UNSUPPORTED` until a deterministic mapping is available.
+Simple copied links such as `https://www.figma.com/design/FILEKEY/name?node-id=1-2` resolve offline after importing with the matching `--file-key`. File-only queries list visible top-level frame/section screens. Node queries return bounded geometry, local positions and transforms, layout, compact paint values, text and rich-text styles, component information, and asset facts. Nested instance-path IDs are intentionally rejected with `INSTANCE_PATH_UNSUPPORTED` until a deterministic mapping is available.
 
 CLI errors with `--json` use the same versioned `{ schemaVersion: 1, error: ... }` envelope returned by MCP. Use `--depth`, `--max-nodes`, and `--max-text-units` to request smaller context; hard-limit violations are explicit errors rather than silent clamping.
 

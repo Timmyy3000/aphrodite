@@ -7,6 +7,8 @@ import { normalizeGraph } from '../../src/import/graph.js';
 import { AssetV1 } from '../../src/contracts/v1.js';
 import { importDocument } from '../../src/import/import-document.js';
 import { DesignStore } from '../../src/context/extract.js';
+import { extractNodeFacts } from '../../src/context/extract.js';
+import { buildIndex } from '../../src/index/build-index.js';
 import { readImportedDocument } from '../../src/import/import-document.js';
 import { initProject } from '../../src/core/project.js';
 import { runCli } from '../../src/cli.js';
@@ -28,6 +30,15 @@ function capture() {
 }
 
 describe('hardening regressions', () => {
+  it('normalizes parser-shaped canvas geometry, paints, layout, and rich text styles', () => {
+    const graph = normalizeGraph({ guid: { sessionID: 0, localID: 0 }, type: 'DOCUMENT', children: [{ guid: { sessionID: 1, localID: 1 }, type: 'TEXT', size: { x: 166, y: 19 }, transform: { m00: 1, m01: 0, m02: 105, m10: 0, m11: 1, m12: 723 }, stackMode: 'HORIZONTAL', stackSpacing: 8, fillPaints: [{ type: 'SOLID', color: { r: 1, g: 0.345, b: 0, a: 1 } }], fontName: { family: 'Inter', style: 'Regular', postscript: 'Inter-Regular' }, fontSize: 16, textData: { characters: 'Hi', characterStyleIDs: [4, 4], styleOverrideTable: [{ styleID: 4, fontSize: 18 }] }, children: [] }] });
+    const node = graph.nodes.get('1:1')!;
+    const warnings: any[] = [];
+    const facts = extractNodeFacts(node, buildIndex(graph), { maxTextUnits: 100, remainingTextUnits: 100, textTruncated: false, warnings });
+    expect(facts).toMatchObject({ geometry: { size: { width: 166, height: 19 }, position: { x: 105, y: 723 } }, layout: { layoutMode: 'HORIZONTAL', itemSpacing: 8 }, visual: { fills: [{ type: 'SOLID' }] }, text: { baseStyle: { fontFamily: 'Inter', fontSize: 16 }, runs: [{ styleId: 4, resolvedStyle: { fontSize: 18 } }] } });
+    expect(warnings).not.toContainEqual(expect.objectContaining({ code: 'TEXT_STYLE_INVALID' }));
+  });
+
   it('extracts image paints from parser-shaped fillPaints', async () => {
     const project = await mkdtemp(join(tmpdir(), 'aphrodite-assets-'));
     const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);

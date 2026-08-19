@@ -18,7 +18,7 @@ export const LIMITS = {
   maxVectorLoops: 100_000,
   maxVectorIndices: 250_000,
   maxVectorAllocations: 500_000,
-  defaultContextDepth: 3,
+  defaultContextDepth: 2,
   maxContextDepth: 8,
   defaultContextNodes: 64,
   maxContextNodes: 256,

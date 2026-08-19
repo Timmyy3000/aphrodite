@@ -10,13 +10,13 @@ export function warning(code: string, message: string, details?: Record<string, 
  */
 export function inferGuidance(raw: Record<string, any>, facts: Record<string, unknown>, childCount: number): GuidanceV1[] {
   const guidance: GuidanceV1[] = [];
-  const layoutMode = raw.layoutMode ?? raw.layout?.layoutMode;
+  const layoutMode = raw.layoutMode ?? raw.stackMode ?? raw.layout?.layoutMode;
   if ((layoutMode === 'HORIZONTAL' || layoutMode === 'VERTICAL') && childCount > 0) {
     guidance.push({
       kind: 'layout',
       suggestion: `Use a semantic flex ${layoutMode === 'HORIZONTAL' ? 'row' : 'column'} container; use the recorded spacing and padding as verification evidence.`,
       confidence: 0.9,
-      evidence: ['facts.layout.layoutMode', ...(raw.itemSpacing !== undefined ? ['facts.layout.itemSpacing'] : [])],
+      evidence: ['facts.layout.layoutMode', ...((raw.itemSpacing ?? raw.stackSpacing) !== undefined ? ['facts.layout.itemSpacing'] : [])],
     });
   } else if (layoutMode === 'NONE' && childCount > 1 && raw.constraints) {
     guidance.push({

@@ -11,7 +11,7 @@ const root = await mkdtemp(join(tmpdir(), 'aphrodite-skill-'));
 const skillsRoot = join(root, 'skills');
 const copied = join(skillsRoot, 'aphrodite');
 await cp(join(process.cwd(), 'skills', 'aphrodite'), copied, { recursive: true });
-const skill = await readFile(join(copied, 'SKILL.md'), 'utf8');
+const skill = (await readFile(join(copied, 'SKILL.md'), 'utf8')).replace(/\r\n/g, '\n');
 if (!skill.startsWith('---\nname: aphrodite\ndescription: ')) throw new Error('Skill frontmatter is missing the required name/description.');
 if (!skill.includes('MCP-first') || !skill.includes('npx --yes github:Timmyy3000/aphrodite')) throw new Error('Skill is missing the MCP-first GitHub setup workflow.');
 const interfaceMetadata = await readFile(join(copied, 'agents', 'openai.yaml'), 'utf8');
