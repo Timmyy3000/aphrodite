@@ -103,7 +103,10 @@ function baseTextStyle(raw: Record<string, any>, textRaw: Record<string, any>): 
 function styleOverride(table: unknown, styleId: unknown): Record<string, unknown> | undefined {
   if (styleId === undefined || styleId === null) return undefined;
   let value: unknown;
-  if (Array.isArray(table)) value = table.find(item => item && typeof item === 'object' && String((item as Record<string, unknown>).styleID) === String(styleId)) ?? table[Number(styleId)];
+  if (Array.isArray(table)) {
+    const hasExplicitIds = table.some(item => item && typeof item === 'object' && 'styleID' in item);
+    value = hasExplicitIds ? table.find(item => item && typeof item === 'object' && String((item as Record<string, unknown>).styleID) === String(styleId)) : table[Number(styleId)];
+  }
   else if (table && typeof table === 'object') value = (table as Record<string, unknown>)[String(styleId)];
   if (!value || typeof value !== 'object') return undefined;
   return baseTextStyle(value as Record<string, any>, value as Record<string, any>);
@@ -171,7 +174,6 @@ function textFacts(raw: Record<string, any>, options: FactOptions): Record<strin
   if (ids !== undefined) {
     if (!Array.isArray(ids) || ids.length < Math.min(fullUnits, options.maxTextUnits)) invalidStyles = true;
     if (!invalidStyles) {
-      let start = 0;
       for (let offset = 0; offset < text.length; offset++) {
         const rawStyleId = ids[offset];
         if (!(typeof rawStyleId === 'number' && Number.isInteger(rawStyleId) && rawStyleId >= 0) || (table !== undefined && !styleOverride(table, rawStyleId) && rawStyleId !== 0)) invalidStyles = true;
@@ -182,8 +184,7 @@ function textFacts(raw: Record<string, any>, options: FactOptions): Record<strin
           previous.end = offset + 1;
           previous.text = text.slice(previous.start, previous.end);
         } else {
-          runs.push({ start, end: offset + 1, text: text.slice(start, offset + 1), ...(styleId === undefined ? {} : { styleId }), resolvedStyle });
-          start = offset + 1;
+          runs.push({ start: offset, end: offset + 1, text: text.slice(offset, offset + 1), ...(styleId === undefined ? {} : { styleId }), resolvedStyle });
         }
       }
     }

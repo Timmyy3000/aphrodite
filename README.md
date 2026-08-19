@@ -2,7 +2,7 @@
 
 Aphrodite is an MCP-first, local-first Figma `.fig` tool for agents building pixel-perfect interfaces. It turns a local design file and a copied frame link into bounded, structured design context: recorded measurements and styles, hierarchy, component information, asset references, and confidence-labelled flex/grid guidance. The goal is a close computed result without forcing agents into brittle absolute positioning. Figma API access, browser screenshots, and an npm publication are not required.
 
-Version `0.2.0` normalizes the parser-native geometry, transform, paint, stack-layout, and typography fields found in canvas 106 documents. It also fixes rich-text style lookup and reduces default response density by summarizing unsupported vector diagnostics and returning two descendant levels by default.
+Version `0.2.1` normalizes the parser-native geometry, transform, paint, stack-layout, and typography fields found in canvas 106 documents. It also fixes rich-text style lookup and boundaries, and reduces default response density by summarizing unsupported vector diagnostics and returning two descendant levels by default.
 
 ## Start with MCP (no repository checkout required)
 
@@ -11,15 +11,15 @@ Users only need Node.js 22+ (which includes `npm`/`npx`), a local zipped `.fig` 
 From the application project root, run:
 
 ```bash
-npx --yes github:Timmyy3000/aphrodite#v0.2.0 init --project .
-npx --yes github:Timmyy3000/aphrodite#v0.2.0 import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
+npx --yes github:Timmyy3000/aphrodite#v0.2.1 init --project .
+npx --yes github:Timmyy3000/aphrodite#v0.2.1 import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
 ```
 
 On Windows PowerShell, quote paths that contain spaces:
 
 ```powershell
-npx --yes github:Timmyy3000/aphrodite#v0.2.0 init --project .
-npx --yes github:Timmyy3000/aphrodite#v0.2.0 import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
+npx --yes github:Timmyy3000/aphrodite#v0.2.1 init --project .
+npx --yes github:Timmyy3000/aphrodite#v0.2.1 import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
 ```
 
 Use `--file-key` when the agent will receive a copied Figma URL; use only `--alias handoff` when the agent will refer to the imported file by alias.
@@ -33,7 +33,7 @@ Then add Aphrodite to the agent host's MCP configuration. The portable GitHub/np
       "command": "npx",
       "args": [
         "--yes",
-        "github:Timmyy3000/aphrodite#v0.2.0",
+        "github:Timmyy3000/aphrodite#v0.2.1",
         "mcp",
         "--project",
         "/absolute/path/to/the/application"

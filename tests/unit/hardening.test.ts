@@ -39,6 +39,13 @@ describe('hardening regressions', () => {
     expect(warnings).not.toContainEqual(expect.objectContaining({ code: 'TEXT_STYLE_INVALID' }));
   });
 
+  it('keeps explicit rich-text style runs non-overlapping', () => {
+    const graph = normalizeGraph({ guid: { sessionID: 0, localID: 0 }, type: 'DOCUMENT', children: [{ guid: { sessionID: 1, localID: 1 }, type: 'TEXT', textData: { characters: 'AB', characterStyleIDs: [4, 5], styleOverrideTable: [{ styleID: 4, fontSize: 14 }, { styleID: 5, fontSize: 16 }] }, children: [] }] });
+    const node = graph.nodes.get('1:1')!;
+    const facts = extractNodeFacts(node, buildIndex(graph), { maxTextUnits: 100, remainingTextUnits: 100, textTruncated: false, warnings: [] }) as any;
+    expect(facts.text.runs).toMatchObject([{ start: 0, end: 1, text: 'A', styleId: 4, resolvedStyle: { fontSize: 14 } }, { start: 1, end: 2, text: 'B', styleId: 5, resolvedStyle: { fontSize: 16 } }]);
+  });
+
   it('extracts image paints from parser-shaped fillPaints', async () => {
     const project = await mkdtemp(join(tmpdir(), 'aphrodite-assets-'));
     const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);

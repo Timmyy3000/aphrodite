@@ -21,15 +21,15 @@ Walk the user through this sequence when Aphrodite is not connected:
 4. Run the GitHub-backed npx commands from the application project root. This does not require an npm publication or a repository checkout in the application:
 
    ```bash
-   npx --yes github:Timmyy3000/aphrodite#v0.2.0 init --project .
-   npx --yes github:Timmyy3000/aphrodite#v0.2.0 import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
+   npx --yes github:Timmyy3000/aphrodite#v0.2.1 init --project .
+   npx --yes github:Timmyy3000/aphrodite#v0.2.1 import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
    ```
 
    Use a quoted path on Windows PowerShell:
 
    ```powershell
-   npx --yes github:Timmyy3000/aphrodite#v0.2.0 init --project .
-   npx --yes github:Timmyy3000/aphrodite#v0.2.0 import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
+   npx --yes github:Timmyy3000/aphrodite#v0.2.1 init --project .
+   npx --yes github:Timmyy3000/aphrodite#v0.2.1 import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
    ```
 
    The first npx run downloads the public GitHub package into npm's cache and builds the CLI through its `prepare` script. If the user wants a fixed/offline checkout, clone the repository, run `npm ci` and `npm run build`, and replace the npx command with `node /absolute/path/to/aphrodite/dist/cli.js`.
@@ -43,7 +43,7 @@ Walk the user through this sequence when Aphrodite is not connected:
          "command": "npx",
          "args": [
            "--yes",
-           "github:Timmyy3000/aphrodite#v0.2.0",
+           "github:Timmyy3000/aphrodite#v0.2.1",
            "mcp",
            "--project",
            "/absolute/path/to/the/application"
@@ -86,7 +86,7 @@ Aphrodite exposes exactly two MCP tools:
 
 MCP stdout is reserved for JSON-RPC; diagnostics belong on stderr. Responses are bounded. Treat `truncation` as part of the result: if content was omitted, request a narrower subtree or a larger permitted budget rather than inventing missing details.
 
-Version `0.2.0` returns parser-native sizes and positions, compact paints, stack layout fields, and font/rich-text styles. Its default query includes two descendant levels to preserve semantic structure without flooding context with deep vector internals.
+Version `0.2.1` returns parser-native sizes and positions, compact paints, stack layout fields, and correct font/rich-text style runs. Its default query includes two descendant levels to preserve semantic structure without flooding context with deep vector internals.
 
 ## Recovery
 
