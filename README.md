@@ -2,7 +2,7 @@
 
 Aphrodite is an MCP-first, local-first Figma `.fig` tool for agents building pixel-perfect interfaces. It turns a local design file and a copied frame link into bounded, structured design context: recorded measurements and styles, hierarchy, component information, asset references, and confidence-labelled flex/grid guidance. The goal is a close computed result without forcing agents into brittle absolute positioning. Figma API access, browser screenshots, and an npm publication are not required.
 
-Version `0.2.2` normalizes the parser-native geometry, transform, paint, stack-layout, and typography fields found in canvas 106 documents. It also fixes rich-text style lookup and boundaries, removes duplicate MCP success payloads, and makes the flow/asset handoff explicit for design implementation agents.
+Version `0.2.3` normalizes the parser-native geometry, transform, paint, stack-layout, and typography fields found in canvas 106 documents. It also fixes rich-text style lookup and boundaries, removes duplicate MCP success payloads, and publishes the project-aware `design-to-code` implementation loop alongside the Aphrodite MCP skill.
 
 ## Start with MCP (no repository checkout required)
 
@@ -11,15 +11,15 @@ Users only need Node.js 22+ (which includes `npm`/`npx`), a local zipped `.fig` 
 From the application project root, run:
 
 ```bash
-npx --yes github:Timmyy3000/aphrodite#v0.2.2 init --project .
-npx --yes github:Timmyy3000/aphrodite#v0.2.2 import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
+npx --yes github:Timmyy3000/aphrodite#v0.2.3 init --project .
+npx --yes github:Timmyy3000/aphrodite#v0.2.3 import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
 ```
 
 On Windows PowerShell, quote paths that contain spaces:
 
 ```powershell
-npx --yes github:Timmyy3000/aphrodite#v0.2.2 init --project .
-npx --yes github:Timmyy3000/aphrodite#v0.2.2 import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
+npx --yes github:Timmyy3000/aphrodite#v0.2.3 init --project .
+npx --yes github:Timmyy3000/aphrodite#v0.2.3 import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
 ```
 
 Use `--file-key` when the agent will receive a copied Figma URL; use only `--alias handoff` when the agent will refer to the imported file by alias.
@@ -35,7 +35,7 @@ Then add Aphrodite to the agent host's MCP configuration. The portable GitHub/np
       "command": "npx",
       "args": [
         "--yes",
-        "github:Timmyy3000/aphrodite#v0.2.2",
+        "github:Timmyy3000/aphrodite#v0.2.3",
         "mcp",
         "--project",
         "/absolute/path/to/the/application"
@@ -108,13 +108,14 @@ Extracted assets are cache-local references under `.aphrodite/documents/<import-
 
 ## Skill
 
-The repository-owned Codex skill is at [`skills/aphrodite/SKILL.md`](skills/aphrodite/SKILL.md). The skill teaches an agent the MCP-first workflow, how to walk a user through setup, and how to turn a frame into a pixel-accurate flex/grid implementation.
+The repository ships two Codex skills: [`skills/aphrodite/SKILL.md`](skills/aphrodite/SKILL.md) teaches the local MCP setup and evidence contract, while [`skills/design-to-code/SKILL.md`](skills/design-to-code/SKILL.md) drives the project audit, user flow handoff, evidence map, clarification gates, and render/compare loop.
 
-To install it for Codex, clone or download this repository and copy the complete `skills/aphrodite/` directory into the host's skills directory. For example, on Windows PowerShell:
+To install them for Codex, clone or download this repository and copy both skill directories into the host's skills directory. For example, on Windows PowerShell:
 
 ```powershell
 git clone --depth 1 https://github.com/Timmyy3000/aphrodite.git
 Copy-Item -Recurse -Force .\aphrodite\skills\aphrodite "$env:USERPROFILE\.codex\skills\aphrodite"
+Copy-Item -Recurse -Force .\aphrodite\skills\design-to-code "$env:USERPROFILE\.codex\skills\design-to-code"
 ```
 
 On macOS/Linux:
@@ -123,6 +124,7 @@ On macOS/Linux:
 git clone --depth 1 https://github.com/Timmyy3000/aphrodite.git
 mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
 cp -R aphrodite/skills/aphrodite "${CODEX_HOME:-$HOME/.codex}/skills/aphrodite"
+cp -R aphrodite/skills/design-to-code "${CODEX_HOME:-$HOME/.codex}/skills/design-to-code"
 ```
 
 Installing the skill and running the MCP server are separate: the skill gives the agent the playbook, while the MCP entry above gives it live local design context. An agent can also use this README and the public repository URL to guide a user through the npx setup without having the repository checked out in the application project.

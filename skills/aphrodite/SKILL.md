@@ -21,15 +21,15 @@ Walk the user through this sequence when Aphrodite is not connected:
 4. Run the GitHub-backed npx commands from the application project root. This does not require an npm publication or a repository checkout in the application:
 
    ```bash
-   npx --yes github:Timmyy3000/aphrodite#v0.2.2 init --project .
-   npx --yes github:Timmyy3000/aphrodite#v0.2.2 import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
+   npx --yes github:Timmyy3000/aphrodite#v0.2.3 init --project .
+   npx --yes github:Timmyy3000/aphrodite#v0.2.3 import /path/to/design.fig --project . --file-key FILEKEY --alias handoff --json
    ```
 
    Use a quoted path on Windows PowerShell:
 
    ```powershell
-   npx --yes github:Timmyy3000/aphrodite#v0.2.2 init --project .
-   npx --yes github:Timmyy3000/aphrodite#v0.2.2 import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
+   npx --yes github:Timmyy3000/aphrodite#v0.2.3 init --project .
+   npx --yes github:Timmyy3000/aphrodite#v0.2.3 import ".\design.fig" --project . --file-key FILEKEY --alias handoff --json
    ```
 
    The first npx run downloads the public GitHub package into npm's cache and builds the CLI through its `prepare` script. If the user wants a fixed/offline checkout, clone the repository, run `npm ci` and `npm run build`, and replace the npx command with `node /absolute/path/to/aphrodite/dist/cli.js`.
@@ -43,7 +43,7 @@ Walk the user through this sequence when Aphrodite is not connected:
          "command": "npx",
          "args": [
            "--yes",
-           "github:Timmyy3000/aphrodite#v0.2.2",
+           "github:Timmyy3000/aphrodite#v0.2.3",
            "mcp",
            "--project",
            "/absolute/path/to/the/application"
@@ -92,7 +92,7 @@ If the agent host exposes only text content and shows a blank successful result,
 
 If a copied local-file URL is rejected with `URL_INVALID`, use the HTTPS Figma URL from the handoff or query by `{ "fileKey": "FILEKEY", "nodeId": "PAGE:NODE" }` / `{ "alias": "handoff", "nodeId": "PAGE:NODE" }`. A local `file:///...` URL is not a valid MCP node reference.
 
-Version `0.2.2` returns parser-native sizes and positions, compact paints, stack layout fields, and correct font/rich-text style runs. Its default query includes two descendant levels to preserve semantic structure without flooding context with deep vector internals.
+Version `0.2.3` returns parser-native sizes and positions, compact paints, stack layout fields, and correct font/rich-text style runs. Its default query includes two descendant levels to preserve semantic structure without flooding context with deep vector internals.
 
 ## Recovery
 

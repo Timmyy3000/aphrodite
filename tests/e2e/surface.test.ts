@@ -40,7 +40,7 @@ describe('surface e2e', () => {
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'e2e', version: '1' } } })}\n`);
     const initialized = await waitFor(1);
     expect(initialized.result.serverInfo.name).toBe('aphrodite');
-    expect(initialized.result.serverInfo.version).toBe('0.2.2');
+    expect(initialized.result.serverInfo.version).toBe('0.2.3');
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} })}\n`);
     const response = await waitFor(2);
     expect(response.result.tools.map((tool: { name: string }) => tool.name)).toEqual(['list_design_screens', 'get_design_context']);
