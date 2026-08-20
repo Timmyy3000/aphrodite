@@ -1,5 +1,8 @@
 import { z } from 'zod';
-export const CACHE_SCHEMA_VERSION = 1 as const; export const CONTEXT_SCHEMA_VERSION = 1 as const; export const RAW_SCHEMA_VERSION = 1 as const; export const IMPORTER_VERSION = '0.1.0' as const;
+import { APHRODITE_VERSION } from '../version.js';
+export const CACHE_SCHEMA_VERSION = 1 as const; export const CONTEXT_SCHEMA_VERSION = 1 as const; export const RAW_SCHEMA_VERSION = 1 as const;
+/** Importer identity participates in import IDs so parser changes invalidate stale caches. */
+export const IMPORTER_VERSION = APHRODITE_VERSION;
 export const CacheVersionTuple = z.object({ cacheSchemaVersion: z.literal(1), contextSchemaVersion: z.literal(1), rawSchemaVersion: z.literal(1) }).strict();
 export const RootManifestV1 = CacheVersionTuple.extend({ importerVersion: z.string().min(1), supportedFigVersions: z.array(z.literal(106)).min(1), registrations: z.record(z.string(), z.object({ importId: z.string().regex(/^[a-f0-9]{64}$/), fileKey: z.string().optional(), alias: z.string().optional() }).strict()) }).strict();
 export type RootManifestV1 = z.infer<typeof RootManifestV1>;

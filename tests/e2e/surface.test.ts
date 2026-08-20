@@ -38,12 +38,43 @@ describe('surface e2e', () => {
     child.stdout.on('data', chunk => { buffer += String(chunk); const parts = buffer.split('\n'); buffer = parts.pop() ?? ''; lines.push(...parts.filter(Boolean)); });
     const waitFor = async (id: number) => { for (let attempt = 0; attempt < 40; attempt++) { const line = lines.find(value => value.includes(`\"id\":${id}`)); if (line) return JSON.parse(line); await new Promise(resolve => setTimeout(resolve, 25)); } throw new Error(`MCP response ${id} timed out`); };
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'e2e', version: '1' } } })}\n`);
-    await waitFor(1);
+    const initialized = await waitFor(1);
+    expect(initialized.result.serverInfo.name).toBe('aphrodite');
+    expect(initialized.result.serverInfo.version).toBe('0.2.2');
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} })}\n`);
     const response = await waitFor(2);
     expect(response.result.tools.map((tool: { name: string }) => tool.name)).toEqual(['list_design_screens', 'get_design_context']);
+    expect(response.result.tools.every((tool: { outputSchema?: unknown }) => tool.outputSchema)).toBe(true);
     expect(lines.every(line => !line.includes('[aphrodite:mcp]'))).toBe(true);
     child.kill();
+  });
+
+  it('returns bounded tool results through structuredContent without a full text mirror', async () => {
+    const project = await mkdtemp(join(tmpdir(), 'aphrodite-mcp-result-'));
+    let c = capture(); expect(await runCli(['init', '--project', project], c.io)).toBe(0);
+    c = capture(); expect(await runCli(['import', fixture, '--project', project, '--file-key', 'FILE123', '--alias', 'fixture', '--json'], c.io)).toBe(0);
+    const child = spawn(process.execPath, ['--import', 'tsx', 'src/cli.ts', 'mcp', '--project', project], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+    let buffer = '';
+    const lines: string[] = [];
+    child.stdout.on('data', chunk => { buffer += String(chunk); const parts = buffer.split('\n'); buffer = parts.pop() ?? ''; lines.push(...parts.filter(Boolean)); });
+    const waitFor = async (id: number) => { for (let attempt = 0; attempt < 40; attempt++) { const line = lines.find(value => value.includes(`\"id\":${id}`)); if (line) return JSON.parse(line); await new Promise(resolve => setTimeout(resolve, 25)); } throw new Error(`MCP response ${id} timed out`); };
+    try {
+      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'e2e', version: '1' } } })}\n`);
+      await waitFor(1);
+      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized', params: {} })}\n`);
+      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'list_design_screens', arguments: { alias: 'fixture' } } })}\n`);
+      const screens = await waitFor(2);
+      expect(screens.error).toBeUndefined();
+      expect(screens.result.content).toEqual([]);
+      expect(ScreenListV1.parse(screens.result.structuredContent).document.alias).toBe('fixture');
+      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'get_design_context', arguments: { alias: 'fixture', nodeId: '1:2' } } })}\n`);
+      const context = await waitFor(3);
+      expect(context.error).toBeUndefined();
+      expect(context.result.content).toEqual([]);
+      expect(DesignContextV1.parse(context.result.structuredContent).target.id).toBe('1:2');
+    } finally {
+      child.kill();
+    }
   });
 
 });

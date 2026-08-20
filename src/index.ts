@@ -16,3 +16,4 @@ export * from './index/build-index.js';
 export * from './context/figma-url.js';
 export * from './context/guidance.js';
 export * from './context/extract.js';
+export * from './version.js';
